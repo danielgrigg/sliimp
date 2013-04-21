@@ -1,0 +1,3 @@
+[submodule "bundle/exru"]
+	path = bundle/exru
+	url = https://github.com/danielgrigg/exru.git
