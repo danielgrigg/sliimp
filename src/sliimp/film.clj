@@ -64,7 +64,6 @@
 (defn image-process [image kernel-fn]
 "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
   (reduce 
-   (fn [image' [x y]] (set-pixel image' (f x y) x y)) 
+   (fn [image' [x y]] (set-pixel image' (kernel-fn x y) x y)) 
    image
    (rect-seq (:bounds image))))
-
