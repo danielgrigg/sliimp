@@ -11,7 +11,7 @@
   (width [this])
   (height [this]))
 
-(defrecord Rect [^double x0 ^double y0 ^double x1 ^double y1]
+(defrecord Rect [x0 y0 x1 y1]
   Bounded2
   (width [this]
     (- x1 x0))
@@ -54,6 +54,8 @@
           (+ y radius +0.5)))
 
 (defn rect-seq [^Rect r]
-  (for [y (range (:y0 r) (:y1 r))
-        x (range (:x0 r) (:x1 r))]
-    [x y]))
+  (let [x0 (int (:x0 r))
+        y0 (int (:y0 r))
+        x1 (int (:x1 r))
+        y1 (int (:y1 r))]
+    (for [y (range y0 y1) x (range x0 x1)] [x y])))

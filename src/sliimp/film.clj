@@ -34,7 +34,7 @@
                            (* (height bounds) (width bounds))
                           pixel-black)))))
 
-(defn- pixel-idx [^Film f ^long x ^long y]
+(defn pixel-idx [^Film f ^long x ^long y]
   (+ (* y (int (width (:bounds f)))) x))
 
 (defn get-pixel [^Film f ^long x ^long y]
@@ -60,4 +60,11 @@
                        (reduce (partial apply conj) []
                                (map (fn [p] (conj (:xyz (normalize p)) 1.0)) 
                                     (:pixels f))))}))
+
+(defn image-process [image kernel-fn]
+"Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
+  (reduce 
+   (fn [image' [x y]] (set-pixel image' (f x y) x y)) 
+   image
+   (rect-seq (:bounds image))))
 
