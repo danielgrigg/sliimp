@@ -12,21 +12,18 @@
   ([[^double x ^double y ^double z :as xyz] weight]
      (Pixel. xyz weight)))
 
-(defn weight [^Pixel p]
+(defn pixel-black [] (Pixel. [0.0 0.0 0.0] 1.0))
+
+(defn add-pixel [^Pixel p ^Pixel q]
+  (Pixel. (v3add (:xyz p) (:xyz q)) (+ (:weight p) (:weight q))))
+
+(defn pixel-colour [^Pixel p]
   (v3muls (:xyz p) (:weight p)))
 
 (defn normalize [^Pixel p]
   (if (< (:weight p) 0.0001)
     (pixel-black)
     (Pixel. (v3muls (:xyz p) (/ (:weight p))) 1.0)))
-
-(defn add-pixel [^Pixel p ^Pixel q]
-  (Pixel. (v3add (:xyz p) (weighted q)) (+ (:weight p) (:weight q))))
-
-(defn get-pixel [^Film f ^long x ^long y]
-  ((:pixels f) (+ (* y (int (width (:bounds f)))) x)))
-
-(defn pixel-black [] (Pixel. [0.0 0.0 0.0] 1.0))
 
 (defrecord Film [^Rect bounds pixels])
 
@@ -37,7 +34,16 @@
                            (* (height bounds) (width bounds))
                           pixel-black)))))
 
-(defn write-exr [{:keys [path width height pixels]}]
+(defn- pixel-idx [^Film f ^long x ^long y]
+  (+ (* y (int (width (:bounds f)))) x))
+
+(defn get-pixel [^Film f ^long x ^long y]
+  ((:pixels f) (+ (* y (int (width (:bounds f)))) x)))
+
+(defn set-pixel [^Film f ^Pixel pxl ^long x ^long y]
+   (assoc f :pixels (assoc (:pixels f) (pixel-idx f x y) pxl)))
+
+(defn- write-exr [{:keys [path width height pixels]}]
   (slicna.core/invoke :exru 
                       "write_rgba"
                       Integer
