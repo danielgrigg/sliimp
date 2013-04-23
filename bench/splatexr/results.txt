@@ -1,0 +1,3 @@
+Film creation + image_process ~ 100 iteration/s
+
+Film creation + image_process + IO ~ 25 iterations/s

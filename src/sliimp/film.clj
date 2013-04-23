@@ -43,7 +43,7 @@
 (defn set-pixel [^Film f ^Pixel pxl ^long x ^long y]
    (assoc f :pixels (assoc (:pixels f) (pixel-idx f x y) pxl)))
 
-(defn- write-exr [{:keys [path width height pixels]}]
+(defn write-exr [{:keys [path width height pixels]}]
   (slicna.core/invoke :exru 
                       "write_rgba"
                       Integer
@@ -67,3 +67,4 @@
    (fn [image' [x y]] (set-pixel image' (kernel-fn x y) x y)) 
    image
    (rect-seq (:bounds image))))
+
