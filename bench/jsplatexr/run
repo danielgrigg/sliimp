@@ -1,0 +1,4 @@
+#!/bin/bash
+
+[ -d build ] && java -cp build:jna.jar SplatExr $1
+

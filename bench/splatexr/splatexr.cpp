@@ -58,20 +58,24 @@ Pixel boxes_fn(int x, int y) {
   return {{(float)sin(0.01 * 0.01 * x * y), 0, 0}, 1};
 }
 
-int main() {
+Pixel bench_fn(int x, int y) {
+  return {{(float)sin(0.03 * 0.03 * x * y), 0, 0}, 1};
+}
+int main(int argc, char** argv) {
 
   int w = 512;
   int h = 512;
-  int iterations = 100;
-
-  for (int i = 0; i < iterations; ++i) {
-
-    Film film(w, h);
-
-    //  auto f = [](int x, int y) -> Pixel { return {{0, 1, 0}, 1};};
-    image_process(film, boxes_fn);
-
-   write_rgba(w, h, "/tmp/splat.exr", (const float*)&film._pixels[0]);
+  int iterations = 10;
+  if (argc > 1) {
+    iterations = atoi(argv[1]);
   }
+
+  printf("%d iterations\n", iterations);
+  Film film(w, h);
+  for (int i = 0; i < iterations; ++i) {
+    image_process(film, bench_fn);
+  }
+  write_rgba(w, h, "/tmp/cpp.exr", (const float*)&film._pixels[0]);
   return 0;
 }
+

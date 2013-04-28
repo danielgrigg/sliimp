@@ -1,0 +1,8 @@
+lang    s/iteration (w/ 1000 iterations)
+
+c++     0.016
+Java    0.043 
+clojure 0.1
+clojure high-level 0.37
+
+
