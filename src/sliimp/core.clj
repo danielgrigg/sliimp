@@ -6,7 +6,6 @@
 (defn continuous "Discrete to continuous" [d] (+ ~d 0.5))
 (defn discrete "Continuous to discrete" [c] (Math/floor c))
 
-
 (defprotocol Bounded2 
   (width [this])
   (height [this]))
