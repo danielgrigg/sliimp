@@ -13,3 +13,6 @@ pom.xml.asc
 *.un~
 .#*
 junk/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
