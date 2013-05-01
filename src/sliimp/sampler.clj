@@ -5,8 +5,8 @@
   (toString [this]
     (str "x-film " x-film " y-film " y-film " value " radiance)))
 
-(defn sample-new [film-xy]
-  (Sample. (film-xy 0) (film-xy 1) [0.0 0.0 0.0]))
+(defn sample [film-x film-y]
+  (Sample. film-x film-y [0.0 0.0 0.0]))
 
 (defn sample-radiance [^Sample s L]
   (Sample. (.x-film s) (.y-film s) L))

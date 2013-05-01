@@ -34,8 +34,8 @@
 
 (defn rect-discrete [^Rect r]
   "Create a discrete rect from a continuous one"
-  (Rect. (discrete (:x0 r)) (discrete (:y0 r))
-         (discrete (:x1 r)) (discrete (:y1 r))))
+  (Rect. (int (discrete (:x0 r))) (int (discrete (:y0 r)))
+         (int (discrete (:x1 r))) (int (discrete (:y1 r)))))
                             
 (defn expand 
   "Expand a discrete Rect by a continous distance d, in all directions"   

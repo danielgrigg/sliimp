@@ -3,8 +3,9 @@
    (:use slimath.core)
    (:use sliimp.core)
    (:require slicna.core)
-   (:import sliimp.core.Rect))
-;   (:import sliimp.core.Bounded2))
+   (:use sliimp.sampler)
+   (:import sliimp.core.Rect)
+   (:import sliimp.sampler.Sample))
 
 
 (defrecord Pixel [^float x ^float y ^float z ^float w])
@@ -19,19 +20,43 @@
 (defmacro array-type [cname & args]
   `(-> (new ~cname ~@args) list into-array class .getName)) 
 
-(defrecord Film [^Rect bounds #^"[Lsliimp.film.Pixel;" pixels]
+(defrecord Film [^Rect bounds 
+                 #^"[Lsliimp.film.Pixel;" pixels 
+                 ^java.util.concurrent.ArrayBlockingQueue requests
+                 ^Thread worker]
   Bounded2
     (width [this] (int (width bounds)))
     (height [this] (int (height bounds))))
 
+(defn add-sample-imp [^Film film ^Sample s fwidth]
+  (doseq [[x y] ((comp rect-seq rect-discrete coverage) (:x-film s) (:y-film s) fwidth)]
+    (println "Adding" s "to" [x y])))
 
-(defn ^Film film [& {:keys [bounds clear-color]}]
-   "Create a film, using a blank pixel array if pixels is missing."
+(defn add-sample [^Film film ^Sample s ^double fwidth]
+  (.put (:requests film) [s fwidth]))
+
+(defn ^Film film  "Create a film, cleared with a clear-color pixel" 
+  [& {:keys [bounds clear-color max-requests] :or {max-requests 100}}]
+  
    (let [#^"[Lsliimp.film.Pixel;" ps (make-array 
                                       Pixel 
                                       (* (height bounds) (width bounds)))
-         ^Pixel p clear-color] 
-     (Film. bounds (amap ps idx ret p))))
+         ^Pixel p clear-color
+         requests (java.util.concurrent.ArrayBlockingQueue. max-requests)
+         ^Film f (Film. bounds 
+                        (amap ps idx ret p) 
+                        requests
+                        nil)
+
+         worker (Thread.
+                 (fn []
+                   (when-let [[s fwidth] (.take  requests)]
+                     (add-sample-imp f s fwidth))
+                   (recur)))]
+
+     (.start worker)
+     (assoc f :worker worker)))             
+                                                                                          
 
 
  (defn ^Pixel add-pixel "Add two pixels" [^Pixel p ^Pixel q]
