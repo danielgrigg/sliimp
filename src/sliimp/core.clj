@@ -3,7 +3,7 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
 
-(defn continuous "Discrete to continuous" [d] (+ ~d 0.5))
+(defn continuous "Discrete to continuous" [d] (+ d 0.5))
 (defn discrete "Continuous to discrete" [c] (Math/floor c))
 
 (defprotocol Bounded2 

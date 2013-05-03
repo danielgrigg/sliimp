@@ -1,15 +1,19 @@
 (ns sliimp.sampler)
 
-(defrecord Sample [^double x-film ^double y-film radiance]
-  Object
-  (toString [this]
-    (str "x-film " x-film " y-film " y-film " value " radiance)))
+(defrecord Sample [^double x-film 
+                   ^double y-film 
+                   ^double sx 
+                   ^double sy 
+                   ^double sz])
 
-(defn sample [film-x film-y]
-  (Sample. film-x film-y [0.0 0.0 0.0]))
+(defn sample 
+  ([film-x film-y] 
+     (Sample. film-x film-y 0.0 0.0 0.0))
+  ([film-x film-y [x y z]]
+     (Sample. film-x film-y x y z)))
 
-(defn sample-radiance [^Sample s L]
-  (Sample. (.x-film s) (.y-film s) L))
+(defn sample-radiance [^Sample s [x y z]]
+  (Sample. (.x-film s) (.y-film s) x y z))
 
 (defn stratify1 [^long w]
   (let [inv-w (double (/ w))]

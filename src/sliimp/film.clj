@@ -1,11 +1,12 @@
  (ns sliimp.film
-   (:gen-class)
+   (:require slicna.core)
    (:use slimath.core)
    (:use sliimp.core)
-   (:require slicna.core)
    (:use sliimp.sampler)
+   (:use sliimp.filter)
    (:import sliimp.core.Rect)
-   (:import sliimp.sampler.Sample))
+   (:import sliimp.sampler.Sample)
+   (:import sliimp.filter.Filter))
 
 
 (defrecord Pixel [^float x ^float y ^float z ^float w])
@@ -22,48 +23,62 @@
 
 (defrecord Film [^Rect bounds 
                  #^"[Lsliimp.film.Pixel;" pixels 
+                 ^Filter filter
                  ^java.util.concurrent.ArrayBlockingQueue requests
                  ^Thread worker]
   Bounded2
     (width [this] (int (width bounds)))
     (height [this] (int (height bounds))))
 
-(defn add-sample-imp [^Film film ^Sample s fwidth]
-  (doseq [[x y] ((comp rect-seq rect-discrete coverage) (:x-film s) (:y-film s) fwidth)]
-    (println "Adding" s "to" [x y])))
+;(defn add-sample-imp [^Film film ^Sample s]
+(defn add-sample-imp [ film s]
+  (doseq [[x y] ((comp rect-seq rect-discrete coverage) 
+                 (:x-film s) (:y-film s) (:width (:filter film)))]
+    (let [idx (int (+ (* y (int (width (:bounds film)))) x))
+          xf (float (- (:x-film s) (continuous x)))
+          yf (float (- (:y-film s) (continuous y)))
+          fweight (float (.filterAt (:filter film) xf yf))      
+          ^Pixel q (aget (:pixels film) idx) 
+          ^Pixel summed (Pixel. (+ (* (:sx s) fweight) (:x q))
+                                 (+ (* (:sy s) fweight) (:y q))
+                                 (+ (* (:sz s) fweight) (:z q))
+                                 fweight)]
+;            (println [x y] idx [xf yf] fweight q summed)
+            (set-pixel film summed x y))))
+          ;  (aset (:pixels film) idx summed))))
 
-(defn add-sample [^Film film ^Sample s ^double fwidth]
-  (.put (:requests film) [s fwidth]))
+
+(defn add-sample [^Film film ^Sample s]
+  (.put (:requests film) s))
 
 (defn ^Film film  "Create a film, cleared with a clear-color pixel" 
-  [& {:keys [bounds clear-color max-requests] :or {max-requests 100}}]
+  [& {:keys [bounds clear-color queue-size filter] 
+      :or {queue-size 100 clear-color (pixel-black)}}]
   
    (let [#^"[Lsliimp.film.Pixel;" ps (make-array 
                                       Pixel 
                                       (* (height bounds) (width bounds)))
-         ^Pixel p clear-color
-         requests (java.util.concurrent.ArrayBlockingQueue. max-requests)
+         requests (java.util.concurrent.ArrayBlockingQueue. queue-size)
          ^Film f (Film. bounds 
-                        (amap ps idx ret p) 
+                        (amap ps idx ret clear-color)
+                        filter
                         requests
                         nil)
 
          worker (Thread.
                  (fn []
-                   (when-let [[s fwidth] (.take  requests)]
-                     (add-sample-imp f s fwidth))
+                   (when-let [s (.take  requests)]
+                     (add-sample-imp f s))
                    (recur)))]
-
      (.start worker)
-     (assoc f :worker worker)))             
+     (assoc f :worker worker)))
                                                                                           
 
-
- (defn ^Pixel add-pixel "Add two pixels" [^Pixel p ^Pixel q]
-   (Pixel. (+ (:x p) (:x q))
-           (+ (:y p) (:y q))
-           (+ (:z p) (:z q))
-           (+ (:w p) (:w q))))
+; (defn ^Pixel add-pixel "Add two pixels" [^Pixel p ^Pixel q]
+;   (Pixel. (+ (:x p) (:x q))
+;           (+ (:y p) (:y q))
+;           (+ (:z p) (:z q))
+;           (+ (:w p) (:w q))))
 
  
  (defn ^Pixel normalize "Normalize a pixel" [^Pixel p]
