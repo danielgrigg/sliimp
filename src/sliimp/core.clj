@@ -3,6 +3,10 @@
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
 
+;; 0-*-1-*-2-*-3
+;; | 0 | 1 | 2 |
+;; In continuous coordinates, pixel 1 is at 1.5.
+;; Likewise, 1.7 would be pixel 1. 
 (defn continuous "Discrete to continuous" [d] (+ d 0.5))
 (defn discrete "Continuous to discrete" [c] (Math/floor c))
 
@@ -20,9 +24,8 @@
 
 (defn rect
   "Create a rect"
- [{:keys [x y width height] :or {x 0 y 0}}]
+ [& {:keys [x y width height] :or {x 0 y 0}}]
    (Rect. x y (+ x width) (+ y height)))
-
 
 (defn clip
   "Clip two rectangles"
@@ -45,16 +48,26 @@
          (discrete (+ (continuous (:x1 r)) d))
          (discrete (+ (continuous (:y1 r)) d))))
 
+
 (defn coverage [^double x ^double y ^double radius]
-"Continuous bounds of the area covered by a circle at (x,y)"
-   (Rect. (- x radius -0.5)
-          (- y radius -0.5)
-          (+ x radius +0.5)
-          (+ y radius +0.5)))
+  "Coverage of [x y] with radius.
+The coverage is the bounding-box of a circle with radius r, centered at [x y]."
+  (let [dx (- x 0.5) dy (- y 0.5)]
+   (Rect. (int (Math/ceil (- dx radius))) 
+          (int (Math/ceil (- dy radius)))
+          (int (Math/floor (+ dx radius)))
+          (int (Math/floor (+ dy radius))))))
+
+;; Everyone says mixing test and production code is bad, but why? 
+;; It's 'close' to the code, so a reader can peruse the test to understand
+;; the code and it forces you to maintain your tests...
+(defn test-coverage []
+  (= (coverage 2.4 2.4 1.5) (Rect. 1 1 3 3)))
 
 (defn rect-seq [^Rect r]
+  "Inclusive seq of all r coordinates"
   (let [x0 (int (:x0 r))
         y0 (int (:y0 r))
         x1 (int (:x1 r))
         y1 (int (:y1 r))]
-    (for [y (range y0 y1) x (range x0 x1)] [x y])))
+    (for [y (range y0 (inc y1)) x (range x0 (inc x1))] [x y])))

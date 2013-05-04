@@ -19,23 +19,25 @@
      (tent 1.0))
   ([^double width]
      (Filter. width
-              (fn [^double x ^double y]
+              (fn ^double [^double x ^double y]
                 (* (- width (Math/abs x)) (- width (Math/abs y)))))))
 
-(defn- gaussian1 [^double x ^double a ^double exp-w]
+(defn- ^double gaussian1 [^double x ^double a ^double exp-w]
   (- (Math/exp (- (* a x x ))) exp-w))
+
      
 (defn gaussian
-  ([] (gaussian 2.0 2.0))
-  
-  ([^double width ^double alpha]
-     (let [exp-w (Math/exp (- (* alpha width width)))]
-       (Filter. width
+  ([& {:keys [width alpha] :or { width 2.0 alpha 2.0}}]
+     (let [w (double width)
+           a (double alpha)
+           exp-w (double (Math/exp (- (* a w w))))]
+       (Filter. w
                 (fn [^double x ^double y]
-               (* (gaussian1 x alpha exp-w) (gaussian1 y alpha exp-w)))))))
+                  (* (gaussian1 x a exp-w) (gaussian1 y a exp-w)))))))
+
 
 (defn- mitchell1 [^double B ^double C ^double x]
-  (let [x (Math/abs (* 2.0 x))]
+  (let [x (double (Math/abs (* 2.0 x)))]
     (if (< x 1.0)
       (* (+ (* (-  12.0 (* 9.0 B) (* 6.0 C)) x x x)
          (* (+ -18.0 (* 12.0 B) (* 6.0 C)) x x)

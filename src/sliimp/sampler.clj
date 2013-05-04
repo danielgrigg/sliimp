@@ -2,9 +2,9 @@
 
 (defrecord Sample [^double x-film 
                    ^double y-film 
-                   ^double sx 
-                   ^double sy 
-                   ^double sz])
+                   ^double X 
+                   ^double Y 
+                   ^double Z])
 
 (defn sample 
   ([film-x film-y] 
