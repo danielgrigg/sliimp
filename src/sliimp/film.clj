@@ -1,5 +1,4 @@
  (ns sliimp.film
-   (:gen-class)
    (:require slicna.core)
    (:use slimath.core)
    (:use (sliimp core sampler filter))
@@ -61,7 +60,6 @@
   "Splat a sample to a film. The sample is mixed into all pixels that contain
 s in their filter extent."
   [^Film film ^Sample s]
-  (println "splat! dispatching" s)
   (.put (:requests film) [s]))
 
 (defn finish-film! "Finish using a film" [^Film f]
@@ -187,14 +185,6 @@ invoked after a finish-film! has been processed."
 (defn pixel-green [] (pixel 0.0 1.0 0.0 1.0))
 (defn pixel-blue [] (pixel 0.0 0.0 1.0 1.0))
                   
-(defn image-process [^Film f kernel-fn]
- "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
-   (doseq [dy (range (height f))
-           dx (range (width f))]
-     (let [x (continuous dx)
-           y (continuous dy)]
-       (doseq (
-       (splat! f (sample x y (kernel-fn x y))))))
 
 (defn poll-film! [^Film f path n s]
   "Poll the film and write it to disk n times over n seconds"

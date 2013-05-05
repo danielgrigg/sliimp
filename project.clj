@@ -5,7 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "LATEST"]
                  [slimath "LATEST"]
-                 [slicna "LATEST"]]
-  :main sliimp.film)
+                 [slicna "LATEST"]])
 
 
