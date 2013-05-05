@@ -64,14 +64,21 @@ The coverage is the bounding-box of a circle with radius r, centered at [x y]."
 (defn test-coverage []
   (= (coverage 2.4 2.4 1.5) (Rect. 1 1 3 3)))
 
-(defn rect-seq 
+(defn rect-seq-inclusive 
   "Inclusive seq of all r coordinates, clipped to (x-max,y-max)."
   ([^Rect r]
-     (rect-seq r (:x1 r) (:y1 r)))
+     (rect-seq-inclusive r (:x1 r) (:y1 r)))
   ([^Rect r ^double x-max ^double y-max]
      (let [x0 (int (:x0 r))
+           y0 (int (:y0 r))
+           x1 (int (:x1 r))
+           y1 (int (:y1 r))]
+       (for [y (range y0 (min y-max (inc y1))) 
+             x (range x0 (min x-max (inc x1)))] [x y]))))
+
+(defn rect-seq "Seq of all r coordinates" [^Rect r]
+  (let [x0 (int (:x0 r))
         y0 (int (:y0 r))
         x1 (int (:x1 r))
         y1 (int (:y1 r))]
-       (for [y (range y0 (min y-max (inc y1))) 
-             x (range x0 (min x-max (inc x1)))] [x y]))))
+    (for [y (range y0 y1) x (range x0 x1)] [x y])))

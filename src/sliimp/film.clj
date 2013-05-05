@@ -1,9 +1,13 @@
  (ns sliimp.film
+   (:gen-class)
    (:require slicna.core)
    (:use slimath.core)
    (:use (sliimp core sampler filter))
    (:import (java.util.concurrent ArrayBlockingQueue TimeUnit))
    (:import (sliimp core.Rect sampler.Sample filter.Filter)))
+
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* true)
 
 (defrecord Pixel [^float X ^float Y ^float Z ^float weight])
 
@@ -22,9 +26,11 @@
                  #^"[Lsliimp.film.Pixel;" pixels 
                  ^String name
                  ^Filter filter
+                 sampler-f
+                 ^long samples-per-pixel
                  ^ArrayBlockingQueue requests
-                 ^Thread worker
-                 finished-f]
+                 finished-f
+                 ^Thread worker]
   Bounded2
     (width [this] (int (width bounds)))
     (height [this] (int (height bounds))))
@@ -38,54 +44,63 @@
           (+ (:weight q) weight)))
 
 ;; splat! implementation
-(defn- splat' [^Film film ^Sample s]
-  (let [x-max (get-in film [:bounds :x1])
+(defn splat' [^Film film ^Sample s]
+  (let [#^"[Lsliimp.film.Pixel;" ps (:pixels film)
+        ^Filter filter' (:filter film)
+        x-max (get-in film [:bounds :x1])
         y-max (get-in film [:bounds :y1])
         coverage-seq (fn [^double x ^double y ^double w] 
                     (-> (coverage x y w)
                         (clip (:bounds film))
-                        rect-seq))
+                        rect-seq-inclusive))
         filter-width (double (get-in film [:filter :width]))]
 
     (doseq [[dx dy] (coverage-seq (:x-film s) (:y-film s) filter-width)]
       (let [idx (int (+ (* dy (int (width (:bounds film)))) dx))
             xf (float (- (:x-film s) dx 0.5))
             yf (float (- (:y-film s) dy 0.5))
-            weight (float (.filterAt (:filter film) xf yf))
-            ^Pixel q (aget (:pixels film) idx)]
-          (aset (:pixels film) idx (add-sample-pixel q s weight))))))
+            weight (float (.filterAt filter' xf yf))
+            ^Pixel q (aget ps idx)]
+          (aset ps idx (add-sample-pixel q s weight))))))
 
 
 (defn splat! 
-  "Splat a sample to a film. The sample is mixed into all pixels that contain
-s in their filter extent."
+  "Splat a sample to a film. The sample is mixed into all pixels that contains in their filter extent."
   [^Film film ^Sample s]
-  (.put (:requests film) [s]))
+  (let [^ArrayBlockingQueue splat-queue' (:requests film)]
+    (.put splat-queue' [s])))
 
-(defn finish-film! "Finish using a film" [^Film f]
+(defn finish-film! "Finish using a film" [^Film film]
 ; Queue'ing nil explicity raises a null exception on the queue,
 ; so package our request.
-  (.put (:requests f) [nil]))
+  (let [^ArrayBlockingQueue splat-queue' (:requests film)]
+    (.put splat-queue' [nil])))
 
 (defn ^Film film 
   "Create a film, cleared with a clear-color pixel. finished-f is 
 invoked after a finish-film! has been processed." 
-  [& {:keys [bounds clear-color queue-size filter name finished-f] 
-      :or {name (str (gensym)) 
-           queue-size 100 
+  [& {:keys [bounds clear-color queue-size filter 
+             sampler-f samples-per-pixel name finished-f]
+      :or {name (str (gensym))
+           filter (box)
+           sampler-f uniform-sampler2
+           samples-per-pixel 1
+           queue-size 128 
            clear-color (pixel 0.0 0.0 0.0) 
-           finished-f identity}}]
-  (let [#^"[Lsliimp.film.Pixel;" ps (make-array 
-                                      Pixel 
-                                      (* (height bounds) (width bounds)))
+           finished-f identity }}]
+
+  (let [npixels (* (height bounds) (width bounds))
+        #^"[Lsliimp.film.Pixel;" ps (make-array Pixel npixels)
          requests (ArrayBlockingQueue. queue-size)
          ^Film film' (Film. bounds 
                         (amap ps idx ret clear-color)
                         name
                         filter
+                        sampler-f 
+                        samples-per-pixel
                         requests
-                        nil
-                        finished-f)
+                        finished-f
+                        nil)
 
          worker (Thread.
                  (fn []
@@ -98,13 +113,6 @@ invoked after a finish-film! has been processed."
                    (finished-f film')))]
      (.start worker)
      (assoc film' :worker worker)))
-                                                                                          
-
-; (defn ^Pixel add-pixel "Add two pixels" [^Pixel p ^Pixel q]
-;   (Pixel. (+ (:x p) (:x q))
-;           (+ (:y p) (:y q))
-;           (+ (:z p) (:z q))
-;           (+ (:w p) (:w q))))
 
  (defn ^Pixel normalize "Normalize a pixel" [^Pixel p]
    (if (< (:weight p) 0.0001)
@@ -123,19 +131,23 @@ invoked after a finish-film! has been processed."
 (defn ^Pixel get-pixel 
   "Get pixel at (x,y)" 
   [^Film f ^long x ^long y]
-   (aget (:pixels f) (int (+ (* y (int (width (:bounds f)))) x))))
+  (let [#^"[Lsliimp.film.Pixel;" ps (:pixels f)] 
+   (aget ps (int (+ (* y (int (width (:bounds f)))) x)))))
  
 (defn set-pixel! 
   "Set pixel at (x,y) to p"
   [^Film f ^Pixel p ^long x ^long y]
-  (aset (:pixels f) (int (+ (* y (int (width (:bounds f)))) x)) p))
+  (let [#^"[Lsliimp.film.Pixel;" ps (:pixels f)]
+    (aset ps (int (+ (* y (int (width (:bounds f)))) x)) p)))
 
 (defn channels 
   "Get interleaved channels."
   ([^Film f c]
-     (map c (:pixels f)))
+     (let [#^"[Lsliimp.film.Pixel;" ps (:pixels f)]
+       (map c ps)))
   ([^Film f c & cs] 
-     (map #(vec (for [c' (cons c cs)] (c' %))) (:pixels f))))
+     (let [#^"[Lsliimp.film.Pixel;" ps (:pixels f)]
+       (map #(vec (for [c' (cons c cs)] (c' %))) ps))))
 
  (defn- write-exr! 
    "Write an EXR file"
@@ -209,3 +221,30 @@ invoked after a finish-film! has been processed."
                         [(* 1.0 (rand)) (* 1.0 (rand)) (* 1.0 (rand))])))
       (poll-film! F path (* n n) 4000)
       (finish-film! F))))
+
+(defn film-sample-seq [^Film f]
+  "Generate a seq of samples for f"
+  (mapcat (partial sample-seq2 (:sampler-f f) (:samples-per-pixel f)) 
+          (rect-seq (:bounds f))))
+
+(defn image-process [^Film f kernel-fn]
+ "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
+ (doseq [[x y] (film-sample-seq f)]
+       (splat! f (sample x y (kernel-fn x y)))))
+
+(defn demo-image-process []
+  (let [f (film :bounds (rect :width 512 :height 512) 
+                :filter (gaussian)
+                :finished-f #(spit-film! % "/tmp/demo-image-process64.exr")
+                :sampler-f stratified-sampler2
+                :samples-per-pixel 100)
+ ;       kf (fn [^double x ^double y] (let [w (* (Math/sin (* x 0.5)) (Math/sin (* y 0.5)))] [w w w]))]
+        kf2 (fn [^double x ^double y] (let [w (* (Math/sin (* x y 0.09 0.09)))] [w w w]))]
+    (do
+      (image-process f kf2)
+      (finish-film! f))))
+                
+(defn -main [& args]
+  (println "running demo")
+  (demo-image-process)
+  (println "done"))
