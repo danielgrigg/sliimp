@@ -25,7 +25,7 @@
                  ^Filter filter
                  ^ArrayBlockingQueue requests
                  ^Thread worker
-                 done]
+                 finished-f]
   Bounded2
     (width [this] (int (width bounds)))
     (height [this] (int (height bounds))))
@@ -40,7 +40,9 @@
 
 ;; splat! implementation
 (defn- splat' [^Film film ^Sample s]
-  (let [coverage-seq (fn [^double x ^double y ^double w] 
+  (let [x-max (get-in film [:bounds :x1])
+        y-max (get-in film [:bounds :y1])
+        coverage-seq (fn [^double x ^double y ^double w] 
                     (-> (coverage x y w)
                         (clip (:bounds film))
                         rect-seq))
@@ -50,51 +52,54 @@
       (let [idx (int (+ (* dy (int (width (:bounds film)))) dx))
             xf (float (- (:x-film s) dx 0.5))
             yf (float (- (:y-film s) dy 0.5))
-            weight (float (.filterAt (:filter film) xf yf))      
-            ^Pixel q (aget (:pixels film) idx)]       
-        (aset (:pixels film) idx (add-sample-pixel q s weight))))))
+            weight (float (.filterAt (:filter film) xf yf))
+            ^Pixel q (aget (:pixels film) idx)]
+          (aset (:pixels film) idx (add-sample-pixel q s weight))))))
 
 
 (defn splat! 
   "Splat a sample to a film. The sample is mixed into all pixels that contain
 s in their filter extent."
   [^Film film ^Sample s]
-  (.put (:requests film) s))
+  (println "splat! dispatching" s)
+  (.put (:requests film) [s]))
 
 (defn finish-film! "Finish using a film" [^Film f]
-  (let [states {false true, true true}]
-    (swap! (:done f) states)))
+; Queue'ing nil explicity raises a null exception on the queue,
+; so package our request.
+  (.put (:requests f) [nil]))
 
-(defn ^Film film "Create a film, cleared with a clear-color pixel" 
-  [& {:keys [bounds clear-color queue-size filter name] 
+(defn ^Film film 
+  "Create a film, cleared with a clear-color pixel. finished-f is 
+invoked after a finish-film! has been processed." 
+  [& {:keys [bounds clear-color queue-size filter name finished-f] 
       :or {name (str (gensym)) 
            queue-size 100 
-           clear-color (pixel 0.0 0.0 0.0) }}]
+           clear-color (pixel 0.0 0.0 0.0) 
+           finished-f identity}}]
   (let [#^"[Lsliimp.film.Pixel;" ps (make-array 
                                       Pixel 
                                       (* (height bounds) (width bounds)))
          requests (ArrayBlockingQueue. queue-size)
-         done (atom false)
-         ^Film f (Film. bounds 
+         ^Film film' (Film. bounds 
                         (amap ps idx ret clear-color)
                         name
                         filter
                         requests
                         nil
-                        done)
+                        finished-f)
 
          worker (Thread.
                  (fn []
-                   (loop [thread-done false]
-                     (when-not thread-done
-                       (when-let [^Sample s (.poll requests 
-                                                   1000 
-                                                   TimeUnit/MILLISECONDS)]
-                         (splat' f s))
-                       (recur @done)))))]
-
+                   (loop [nsplat 1]
+                     (when-let [[^Sample s]  (.take requests)]
+                       (when s
+;                         (println (:name film') "splat(" nsplat "):" s)
+                         (splat' film' s)
+                         (recur (inc nsplat)))))
+                   (finished-f film')))]
      (.start worker)
-     (assoc f :worker worker)))
+     (assoc film' :worker worker)))
                                                                                           
 
 ; (defn ^Pixel add-pixel "Add two pixels" [^Pixel p ^Pixel q]
@@ -167,12 +172,13 @@ s in their filter extent."
 (defn- test-spit! []
   (do
     (let [f (film :bounds (rect :width 512 :height 512) 
-                      :clear-color (pixel (rand) (rand) (rand)))]
+                  :clear-color (pixel (rand) (rand) (rand))
+                  :finished-f #(spit-film! % "/tmp/test-spit.exr"))]
+          
     (spit-film! f "/tmp/test-spit.exr")
     (println "spit done!")
     (Thread/sleep 2000)
-    (println "killing film thread")
-    (splat! f nil))))
+    (finish-film! f))))
 
 (defn pixel-rand [] (pixel (rand) (rand) (rand) 1.0))
 (defn pixel-black [] (pixel 0.0 0.0 0.0 1.0))
@@ -180,18 +186,36 @@ s in their filter extent."
 (defn pixel-red [] (pixel 1.0 0.0 0.0 1.0))
 (defn pixel-green [] (pixel 0.0 1.0 0.0 1.0))
 (defn pixel-blue [] (pixel 0.0 0.0 1.0 1.0))
-
-(defn -main [& args]
-  (do
-    (println "starting spit")
-    (test-spit!)))
                   
 (defn image-process [^Film f kernel-fn]
  "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
-   (doseq [y (range (height f))
-           x (range (width f))]))
+   (doseq [dy (range (height f))
+           dx (range (width f))]
+     (let [x (continuous dx)
+           y (continuous dy)]
+       (doseq (
+       (splat! f (sample x y (kernel-fn x y))))))
 
-(comment
-  (def F (film :bounds (rect :width 10 :height 10) :filter (gaussian 3.0 3.0)))
-  (splat F (sample 4.5 4.5 [1.0 0.0 0.0]))
-  (spit-film F "/tmp/test-splat.exr"))
+(defn poll-film! [^Film f path n s]
+  "Poll the film and write it to disk n times over n seconds"
+  (dotimes [n' n]
+    (spit-film! f path)
+    (Thread/sleep s))
+  (println "poll-film done"))
+
+(defn demo-splat [& {:keys [w h n path] 
+                     :or {w 1024 h 512 n 5 path "/tmp/demo-splat.exr"}}]
+  (let [w' (double w)
+        F  (film :bounds (rect :width w :height h) 
+                :filter (gaussian :width w' :alpha (/ 1.0 w' 2.0))
+                :finished-f #(do 
+                               (println (:name %) "finished") 
+                               (spit-film! % path)))]
+    (do
+      (doseq [y (range n) x (range n)] 
+        (splat! F 
+                (sample (rand-int w) 
+                        (rand-int h) 
+                        [(* 1.0 (rand)) (* 1.0 (rand)) (* 1.0 (rand))])))
+      (poll-film! F path (* n n) 4000)
+      (finish-film! F))))
