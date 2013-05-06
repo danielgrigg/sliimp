@@ -82,8 +82,8 @@ invoked after a finish-film! has been processed."
   [& {:keys [bounds clear-color queue-size filter 
              sampler-f samples-per-pixel name finished-f]
       :or {name (str (gensym))
-           filter (box)
-           sampler-f uniform-sampler2
+           filter (tent)
+           sampler-f stratified-seq2
            samples-per-pixel 1
            queue-size 128 
            clear-color (pixel 0.0 0.0 0.0) 
@@ -107,7 +107,6 @@ invoked after a finish-film! has been processed."
                    (loop [nsplat 1]
                      (when-let [[^Sample s]  (.take requests)]
                        (when s
-;                         (println (:name film') "splat(" nsplat "):" s)
                          (splat' film' s)
                          (recur (inc nsplat)))))
                    (finished-f film')))]
@@ -179,6 +178,7 @@ invoked after a finish-film! has been processed."
                  :width w
                  :height h
                  :pixels fs})))
+
 (defn- test-spit! []
   (do
     (let [f (film :bounds (rect :width 512 :height 512) 
@@ -224,27 +224,22 @@ invoked after a finish-film! has been processed."
       (poll-film! F path (* n n) 4000)
       (finish-film! F))))
 
-(defn film-sample-seq [^Film f]
-  "Generate a seq of samples for f"
-  (mapcat (partial sample-seq2 (:sampler-f f) (:samples-per-pixel f)) 
-          (rect-seq (:bounds f))))
-
 (defn image-process [^Film f kernel-fn]
  "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
- (let [[x0 y0 x1 y1] (rect-vec (:bounds f))]
+ (let [[x0 y0 x1 y1] (rect-vec (:bounds f))
+       sf (partial (:sampler-f f) (:samples-per-pixel f))]
    (doseq [y (range y0 y1) x (range x0 x1)]
-     (let [^Sampler ss (stratified-seq2 25 x y)]
+     (let [^Sampler ss (sf x y)]
        (doseq [^Sample s (:samples ss)]        
          (splat! f (kernel-fn s)))))))
 
-
 (defn demo-image-process []
   (let [f (film :bounds (rect :width 512 :height 512) 
-                :filter (gaussian)
-                :finished-f #(spit-film! % "/tmp/demo-image-process64.exr")
-                :sampler-f stratified-sampler2
-                :samples-per-pixel 100)
-        kf2 (fn [^double x ^double y] (let [w (* (Math/sin (* x y 0.09 0.09)))] [w w w]))]
+                :filter (mitchell)
+                :finished-f #(spit-film! % "/tmp/demo-image-process9.exr")
+                :sampler-f stratified-seq2
+                :samples-per-pixel 1)
+        kf2 (fn [^Sample s] (let [w (* (Math/sin (* (:x-film s) (:y-film s) 0.09 0.09)))] (sample s w 0.5 0.5)))]
     (do
       (image-process f kf2)
       (finish-film! f))))

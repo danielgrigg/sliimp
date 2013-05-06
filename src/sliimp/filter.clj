@@ -1,5 +1,8 @@
 (ns sliimp.filter)
 
+(set! *warn-on-reflection* true)
+(set! *unchecked-math* true)
+
 (definterface FilterOp
   (^double filterAt [^double x ^double y]))
 
