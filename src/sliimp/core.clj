@@ -27,6 +27,9 @@
  [& {:keys [x y width height] :or {x 0 y 0}}]
    (Rect. x y (+ x width) (+ y height)))
 
+(defn rect-vec [^Rect r]
+  [(:x0 r) (:y0 r) (:x1 r) (:y1 r)])
+
 (defn clip
   "Clip two rectangles"
  [^Rect this ^Rect other]

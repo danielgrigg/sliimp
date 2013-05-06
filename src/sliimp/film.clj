@@ -218,7 +218,9 @@ invoked after a finish-film! has been processed."
         (splat! F 
                 (sample (rand-int w) 
                         (rand-int h) 
-                        [(* 1.0 (rand)) (* 1.0 (rand)) (* 1.0 (rand))])))
+                        (* 1.0 (rand)) 
+                        (* 1.0 (rand)) 
+                        (* 1.0 (rand)))))
       (poll-film! F path (* n n) 4000)
       (finish-film! F))))
 
@@ -229,8 +231,12 @@ invoked after a finish-film! has been processed."
 
 (defn image-process [^Film f kernel-fn]
  "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
- (doseq [[x y] (film-sample-seq f)]
-       (splat! f (sample x y (kernel-fn x y)))))
+ (let [[x0 y0 x1 y1] (rect-vec (:bounds f))]
+   (doseq [y (range y0 y1) x (range x0 x1)]
+     (let [^Sampler ss (stratified-seq2 25 x y)]
+       (doseq [^Sample s (:samples ss)]        
+         (splat! f (kernel-fn s)))))))
+
 
 (defn demo-image-process []
   (let [f (film :bounds (rect :width 512 :height 512) 
@@ -238,13 +244,13 @@ invoked after a finish-film! has been processed."
                 :finished-f #(spit-film! % "/tmp/demo-image-process64.exr")
                 :sampler-f stratified-sampler2
                 :samples-per-pixel 100)
- ;       kf (fn [^double x ^double y] (let [w (* (Math/sin (* x 0.5)) (Math/sin (* y 0.5)))] [w w w]))]
         kf2 (fn [^double x ^double y] (let [w (* (Math/sin (* x y 0.09 0.09)))] [w w w]))]
     (do
       (image-process f kf2)
       (finish-film! f))))
                 
 (defn -main [& args]
-  (println "running demo")
-  (demo-image-process)
-  (println "done"))
+  (let [^Film F (film :bounds (rect :width 256 :height 256) :filter (gaussian))]
+    (println "running demo")
+    (demo-image-process)
+    (println "done")))
