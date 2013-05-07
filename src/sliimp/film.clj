@@ -1,5 +1,4 @@
  (ns sliimp.film
-   (:gen-class)
    (:require slicna.core)
    (:use slimath.core)
    (:use (sliimp core sampler filter))
@@ -243,9 +242,3 @@ invoked after a finish-film! has been processed."
     (do
       (image-process f kf2)
       (finish-film! f))))
-                
-(defn -main [& args]
-  (let [^Film F (film :bounds (rect :width 256 :height 256) :filter (gaussian))]
-    (println "running demo")
-    (demo-image-process)
-    (println "done")))
