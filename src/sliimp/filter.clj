@@ -38,7 +38,7 @@
                   (* (gaussian1 x a exp-w) (gaussian1 y a exp-w)))))))
 
 
-(defn- mitchell1 [^double B ^double C ^double x]
+(defn- ^double mitchell1 [^double B ^double C ^double x]
   (let [x (double (Math/abs (* 2.0 x)))]
     (if (< x 1.0)
       (* (+ (* (-  12.0 (* 9.0 B) (* 6.0 C)) x x x)

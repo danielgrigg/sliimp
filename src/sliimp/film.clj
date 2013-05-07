@@ -44,7 +44,7 @@
           (+ (:weight q) weight)))
 
 ;; splat! implementation
-(defn splat' [^Film film ^Sample s]
+(defn- splat' [^Film film ^Sample s]
   (let [#^"[Lsliimp.film.Pixel;" ps (:pixels film)
         ^Filter filter' (:filter film)
         x-max (get-in film [:bounds :x1])
@@ -205,7 +205,7 @@ invoked after a finish-film! has been processed."
     (Thread/sleep s))
   (println "poll-film done"))
 
-(defn demo-splat [& {:keys [w h n path] 
+(defn- demo-splat [& {:keys [w h n path] 
                      :or {w 1024 h 512 n 5 path "/tmp/demo-splat.exr"}}]
   (let [w' (double w)
         F  (film :bounds (rect :width w :height h) 
@@ -233,7 +233,7 @@ invoked after a finish-film! has been processed."
        (doseq [^Sample s (:samples ss)]        
          (splat! f (kernel-fn s)))))))
 
-(defn demo-image-process []
+(defn- demo-image-process []
   (let [f (film :bounds (rect :width 512 :height 512) 
                 :filter (mitchell)
                 :finished-f #(spit-film! % "/tmp/demo-image-process9.exr")
