@@ -1,9 +1,11 @@
  (ns sliimp.film
    (:use [slicna core]
          [slimath core]
+         [sligeom core transform]
          [sliimp core sampler filter])
    (:import [java.util.concurrent ArrayBlockingQueue]
-            [sliimp core.Rect sampler.Sample filter.Filter]))
+            [sliimp core.Rect sampler.Sample filter.Filter]
+            [sligeom.transform Transform]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
@@ -242,3 +244,10 @@ invoked after a finish-film! has been processed."
     (do
       (image-process f kf2)
       (finish-film! f))))
+
+;; NDC to screen coordinates
+(defn ^Transform screen-transform [^double w ^double h]
+  (compose (translate 0 h 0)
+           (scale w (- h) 1) 
+           (scale 0.5 0.5 1.0) 
+           (translate 1 1 0)))
