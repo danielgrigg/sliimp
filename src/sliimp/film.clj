@@ -1,9 +1,9 @@
  (ns sliimp.film
-   (:require slicna.core)
-   (:use slimath.core)
-   (:use (sliimp core sampler filter))
-   (:import (java.util.concurrent ArrayBlockingQueue TimeUnit))
-   (:import (sliimp core.Rect sampler.Sample filter.Filter)))
+   (:use [slicna core]
+         [slimath core]
+         [sliimp core sampler filter])
+   (:import [java.util.concurrent ArrayBlockingQueue]
+            [sliimp core.Rect sampler.Sample filter.Filter]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
