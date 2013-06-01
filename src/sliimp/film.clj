@@ -53,10 +53,11 @@
         coverage-seq (fn [^double x ^double y ^double w] 
                     (-> (coverage x y w)
                         (clip (:bounds film))
-                        rect-seq-inclusive))
+                        (widen-rect 1 1) ;; TODO - need bumping, but do we need y-max/x-max?     
+                        rect-seq))
         filter-width (double (get-in film [:filter :width]))]
 
-    (doseq [[dx dy] (coverage-seq (:x-film s) (:y-film s) filter-width)]
+    (doseq [[dx dy] (coverage-seq (:x-film s) (:y-film s) (* 0.5 filter-width))]
       (let [idx (int (+ (* dy (int (width (:bounds film)))) dx))
             xf (float (- (:x-film s) dx 0.5))
             yf (float (- (:y-film s) dy 0.5))
@@ -219,9 +220,9 @@ invoked after a finish-film! has been processed."
         (splat! F 
                 (sample (rand-int w) 
                         (rand-int h) 
+                        [(* 1.0 (rand)) 
                         (* 1.0 (rand)) 
-                        (* 1.0 (rand)) 
-                        (* 1.0 (rand)))))
+                        (* 1.0 (rand))])))
       (poll-film! F path (* n n) 4000)
       (finish-film! F))))
 

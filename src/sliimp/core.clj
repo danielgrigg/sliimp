@@ -30,6 +30,12 @@
 (defn rect-vec [^Rect r]
   [(:x0 r) (:y0 r) (:x1 r) (:y1 r)])
 
+(defn widen-rect [^Rect r ^long dx ^long dy]
+  (Rect. (:x0 r) 
+        (:y0 r) 
+        (+ (:x1 r) dx)
+        (+ (:y1 r) dy)))
+
 (defn clip
   "Clip two rectangles"
  [^Rect this ^Rect other]
@@ -52,9 +58,9 @@
          (discrete (+ (continuous (:y1 r)) d))))
 
 
-(defn coverage [^double x ^double y ^double radius]
-  "Coverage of [x y] with radius.
-The coverage is the bounding-box of a circle with radius r, centered at [x y]."
+(defn coverage "Coverage of [x y] with radius. The coverage is the bounding-box of a circle with radius r, centered at [x y]." 
+  [^double x ^double y ^double radius]
+
   (let [dx (- x 0.5) dy (- y 0.5)]
    (Rect. (int (Math/ceil (- dx radius))) 
           (int (Math/ceil (- dy radius)))
