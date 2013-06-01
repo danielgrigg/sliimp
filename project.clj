@@ -7,6 +7,7 @@
                  [slimath "LATEST"]
                  [sligeom "LATEST"]
                  [slicna "LATEST"]]
-  :profiles {:dev {:dependencies [[midje "1.5.0"]]}})
+  :profiles {:dev {:dependencies [[midje "1.5.0"]]}}
+  :jvm-opts ["-Xmx2048M"])
 
 

@@ -11,12 +11,12 @@
 
 
 (defn demo-splat [& {:keys [w h n] 
-                      :or {w 1024 h 512 n 8}}]
+                      :or {w 1280 h 720 n 8}}]
   (let [path-prefix (str "/tmp/demo-splat" (rand-int 1000))
         F  (film :bounds (rect :width w :height h) 
                  :filter (gaussian w (/ 1.0 w))
                  :finished-f #(do 
-                                (println (:name %) "finished") 
+                                (println (:name %) "finished" path-prefix) 
                                 (spit-film! % 
                                             (str path-prefix "-final.exr"))))]
     (do
