@@ -18,7 +18,8 @@
 
 (defn tent
 "A linear tent filter"
-  ([& {:keys [width] :or {width 1.0}}]
+  ([] (tent 1.0))
+  ([^double width]
      (Filter. width
               (fn ^double [^double x ^double y]
                 (* (max 0.0 (- width (Math/abs x))) 
@@ -29,10 +30,10 @@
      
 (defn gaussian
   "A gaussian filter"
-  ([& {:keys [width alpha] :or { width 2.0 alpha 2.0}}]
-     (let [w (double width)
-           a (double alpha)
-           exp-w (double (Math/exp (- (* a w w))))]
+  ([] (gaussian 2.0 2.0))
+  ([^double w] (gaussian w w))
+  ([^double w ^double a]
+     (let [exp-w (double (Math/exp (- (* a w w))))]
        (Filter. w
                 (fn [^double x ^double y]
                   (* (gaussian1 x a exp-w) (gaussian1 y a exp-w)))))))
@@ -49,7 +50,7 @@
             (* (+ (* 6.0 B) (* 30.0 C)) x x)
             (* (- (+ (* 12.0 B) (* 48.0 C))) x)
             (+ (* 8.0 B) (* 24.0 C))) (/ 6.0)))))
-
+ 
 (defn mitchell
   "A Mitchell filter"
   ([& {:keys [width B C] :or {width 2.0 

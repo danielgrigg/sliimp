@@ -38,8 +38,7 @@
 (defn uniform2 [^long w ^long h]
   (let [inv-w (double (/ w)) inv-h (double (/ h))]
     (for [x (range w) y (range h)]
-      [ (* (+ x 0.5) inv-w) (* (+ y 0.5) inv-h)])))
-          
+      [ (* (+ x 0.5) inv-w) (* (+ y 0.5) inv-h)])))          
 
 (defn stratified-seq2 [^long nsamples ^long pxl-x ^long pxl-y]
   "Generate a seq of stratified samples for pixel (pxl-x,pxl-y)"
@@ -54,10 +53,6 @@
             (aset ss idx (Sample. film-x film-y 0.0 0.0 0.0))))
         (Sampler. w w ss))))
 
-;; TODO - this method is horribly duplicated. But it's useful
-;; for testing purposes and choosing between 0.5 / rand 
-;; conditionally is too expensive.  But remove this method
-;; when we can.
 (defn uniform-seq2 [^long nsamples ^long pxl-x ^long pxl-y] 
   "Generate a seq of uniformly distributed samples for a pixel"
   (let [w (int (Math/ceil (Math/sqrt nsamples)))
@@ -72,3 +67,9 @@
           (aset ss idx (Sample. fx fy 0.0 0.0 0.0))))
         (Sampler. w w ss))))
 
+(defn sample-random [^long w ^long h]
+  (Sample. (rand-int w) 
+           (rand-int h) 
+           (* 1.0 (rand)) 
+            (* 1.0 (rand)) 
+            (* 1.0 (rand))))

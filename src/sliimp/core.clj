@@ -19,8 +19,7 @@
   (width [this]
     (- x1 x0))
   (height [this]
-    (- y1 y0))
-)
+    (- y1 y0)))
 
 (defn rect
   "Create a rect"
@@ -29,12 +28,6 @@
 
 (defn rect-vec [^Rect r]
   [(:x0 r) (:y0 r) (:x1 r) (:y1 r)])
-
-(defn widen-rect [^Rect r ^long dx ^long dy]
-  (Rect. (:x0 r) 
-        (:y0 r) 
-        (+ (:x1 r) dx)
-        (+ (:y1 r) dy)))
 
 (defn clip
   "Clip two rectangles"
@@ -58,32 +51,15 @@
          (discrete (+ (continuous (:y1 r)) d))))
 
 
-(defn coverage "Coverage of [x y] with radius. The coverage is the bounding-box of a circle with radius r, centered at [x y]." 
-  [^double x ^double y ^double radius]
+(defn coverage "Coverage of [x y] with radius. 
+The coverage is the bounding-box of a circle with radius r, centered at [x y]." 
 
+  [^double x ^double y ^double radius]
   (let [dx (- x 0.5) dy (- y 0.5)]
    (Rect. (int (Math/ceil (- dx radius))) 
           (int (Math/ceil (- dy radius)))
-          (int (Math/floor (+ dx radius)))
-          (int (Math/floor (+ dy radius))))))
-
-;; Everyone says mixing test and production code is bad, but why? 
-;; It's 'close' to the code, so a reader can peruse the test to understand
-;; the code and it forces you to maintain your tests...
-(defn test-coverage []
-  (= (coverage 2.4 2.4 1.5) (Rect. 1 1 3 3)))
-
-(defn rect-seq-inclusive 
-  "Inclusive seq of all r coordinates, clipped to (x-max,y-max)."
-  ([^Rect r]
-     (rect-seq-inclusive r (:x1 r) (:y1 r)))
-  ([^Rect r ^double x-max ^double y-max]
-     (let [x0 (int (:x0 r))
-           y0 (int (:y0 r))
-           x1 (int (:x1 r))
-           y1 (int (:y1 r))]
-       (for [y (range y0 (min y-max (inc y1))) 
-             x (range x0 (min x-max (inc x1)))] [x y]))))
+          (int (Math/floor (+ 1.0 dx radius)))
+          (int (Math/floor (+ 1.0 dy radius))))))
 
 (defn rect-seq "Seq of all r coordinates" [^Rect r]
   (let [x0 (int (:x0 r))
@@ -91,3 +67,8 @@
         x1 (int (:x1 r))
         y1 (int (:y1 r))]
     (for [y (range y0 y1) x (range x0 x1)] [x y])))
+
+(defn clipped-coverage-seq [^Rect r ^double x ^double y ^double w] 
+  (-> (coverage x y w)
+      (clip r)                        
+      rect-seq))

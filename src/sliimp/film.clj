@@ -36,7 +36,7 @@
     (width [this] (int (width bounds)))
     (height [this] (int (height bounds))))
 
-(defn ^Pixel add-sample-pixel 
+(defn ^Pixel add-sample 
   "Add a weighted-sample to a pixel"
   [^Pixel q ^Sample s ^double weight]
   (Pixel. (+ (* (:X s) weight) (:X q))
@@ -48,26 +48,22 @@
 (defn- splat' [^Film film ^Sample s]
   (let [#^"[Lsliimp.film.Pixel;" ps (:pixels film)
         ^Filter filter' (:filter film)
-        x-max (get-in film [:bounds :x1])
-        y-max (get-in film [:bounds :y1])
-        coverage-seq (fn [^double x ^double y ^double w] 
-                    (-> (coverage x y w)
-                        (clip (:bounds film))
-                        (widen-rect 1 1) ;; TODO - need bumping, but do we need y-max/x-max?     
-                        rect-seq))
-        filter-width (double (get-in film [:filter :width]))]
+        filter-width (double (:width filter'))]
 
-    (doseq [[dx dy] (coverage-seq (:x-film s) (:y-film s) (* 0.5 filter-width))]
-      (let [idx (int (+ (* dy (int (width (:bounds film)))) dx))
+    (doseq [[dx dy] (clipped-coverage-seq (:bounds film)
+                                          (:x-film s) 
+                                          (:y-film s) 
+                                          filter-width)]
+      (let [idx (int (+ (* dy (int (width film))) dx))
             xf (float (- (:x-film s) dx 0.5))
             yf (float (- (:y-film s) dy 0.5))
             weight (float (.filterAt filter' xf yf))
             ^Pixel q (aget ps idx)]
-          (aset ps idx (add-sample-pixel q s weight))))))
-
+          (aset ps idx (add-sample q s weight))))))
 
 (defn splat! 
-  "Splat a sample to a film. The sample is mixed into all pixels that contains in their filter extent."
+  "Splat a sample to a film. 
+The sample is mixed into all pixels that contains in their filter extent."
   [^Film film ^Sample s]
   (let [^ArrayBlockingQueue splat-queue' (:requests film)]
     (.put splat-queue' [s])))
@@ -151,7 +147,7 @@ invoked after a finish-film! has been processed."
        (map #(vec (for [c' (cons c cs)] (c' %))) ps))))
 
  (defn- write-exr! 
-   "Write an EXR file"
+   "Write an EXR image"
    [{:keys [path width height pixels]}]
    (slicna.core/invoke :exru 
                        "write_rgba"
@@ -161,7 +157,9 @@ invoked after a finish-film! has been processed."
                        path
                        pixels))
 
- (defn spit-film! [^Film f path]
+ (defn spit-film! 
+   "Write a film"
+   [^Film f path]
    (let [w (int (width (:bounds f)))
          h (int (height (:bounds f)))
          l (int (* w h))
@@ -181,53 +179,9 @@ invoked after a finish-film! has been processed."
                  :height h
                  :pixels fs})))
 
-(defn- test-spit! []
-  (do
-    (let [f (film :bounds (rect :width 512 :height 512) 
-                  :clear-color (pixel (rand) (rand) (rand))
-                  :finished-f #(spit-film! % "/tmp/test-spit.exr"))]
-          
-    (spit-film! f "/tmp/test-spit.exr")
-    (println "spit done!")
-    (Thread/sleep 2000)
-    (finish-film! f))))
-
-(defn pixel-rand [] (pixel (rand) (rand) (rand) 1.0))
-(defn pixel-black [] (pixel 0.0 0.0 0.0 1.0))
-(defn pixel-white [] (pixel 1.0 1.0 1.0 1.0))
-(defn pixel-red [] (pixel 1.0 0.0 0.0 1.0))
-(defn pixel-green [] (pixel 0.0 1.0 0.0 1.0))
-(defn pixel-blue [] (pixel 0.0 0.0 1.0 1.0))
-                  
-
-(defn poll-film! [^Film f path n s]
-  "Poll the film and write it to disk n times over n seconds"
-  (dotimes [n' n]
-    (spit-film! f path)
-    (Thread/sleep s))
-  (println "poll-film done"))
-
-(defn- demo-splat [& {:keys [w h n path] 
-                     :or {w 1024 h 512 n 5 path "/tmp/demo-splat.exr"}}]
-  (let [w' (double w)
-        F  (film :bounds (rect :width w :height h) 
-                :filter (gaussian :width w' :alpha (/ 1.0 w' 2.0))
-                :finished-f #(do 
-                               (println (:name %) "finished") 
-                               (spit-film! % path)))]
-    (do
-      (doseq [y (range n) x (range n)] 
-        (splat! F 
-                (sample (rand-int w) 
-                        (rand-int h) 
-                        [(* 1.0 (rand)) 
-                        (* 1.0 (rand)) 
-                        (* 1.0 (rand))])))
-      (poll-film! F path (* n n) 4000)
-      (finish-film! F))))
-
 (defn image-process [^Film f kernel-fn]
- "Apply kernel-fn to all pixels.  kernel-fn must be a function of 2 arguments, x and y."
+ "Apply kernel-fn to all pixels.  
+kernel-fn must be a function of 2 arguments, x and y."
  (let [[x0 y0 x1 y1] (rect-vec (:bounds f))
        sf (partial (:sampler-f f) (:samples-per-pixel f))]
    (doseq [y (range y0 y1) x (range x0 x1)]
@@ -235,19 +189,9 @@ invoked after a finish-film! has been processed."
        (doseq [^Sample s (:samples ss)]        
          (splat! f (kernel-fn s)))))))
 
-(defn- demo-image-process []
-  (let [f (film :bounds (rect :width 512 :height 512) 
-                :filter (mitchell)
-                :finished-f #(spit-film! % "/tmp/demo-image-process9.exr")
-                :sampler-f stratified-seq2
-                :samples-per-pixel 1)
-        kf2 (fn [^Sample s] (let [w (* (Math/sin (* (:x-film s) (:y-film s) 0.09 0.09)))] (sample s w 0.5 0.5)))]
-    (do
-      (image-process f kf2)
-      (finish-film! f))))
-
-;; NDC to screen coordinates
-(defn ^Transform screen-transform [^double w ^double h]
+(defn ^Transform screen-transform 
+"NDC to screen coordinates. (0,0) in screen-space is the top-left."
+[^double w ^double h]
   (compose (translate 0 h 0)
            (scale w (- h) 1) 
            (scale 0.5 0.5 1.0) 

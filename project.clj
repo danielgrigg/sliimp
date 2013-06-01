@@ -1,4 +1,4 @@
-(defproject sliimp "0.1.9"
+(defproject sliimp "0.1.10"
   :description "An image processing library"
   :url "http://sliplanesoftware.com/"
   :license {:name "Eclipse Public License"
@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "LATEST"]
                  [slimath "LATEST"]
                  [sligeom "LATEST"]
-                 [slicna "LATEST"]])
+                 [slicna "LATEST"]]
+  :profiles {:dev {:dependencies [[midje "1.5.0"]]}})
 
 

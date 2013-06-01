@@ -16,3 +16,4 @@ junk/
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
+demo-out/

@@ -1,7 +1,8 @@
 (ns sliimp.core-test
-  (:use clojure.test
+  (:use midje.sweet
         sliimp.core))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(fact "`clip` clips two rectangles"
+      (clip (rect :x 23 :y 47 :width 34 :height 57)
+            (rect :x 23 :y 47 :width 34 :height 57)) 
+      => (rect :x 23 :y 47 :width 34 :height 57))
