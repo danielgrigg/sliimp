@@ -16,6 +16,9 @@
 (defn sample 
   ([^double film-x ^double film-y] 
      (Sample. film-x film-y 0.0 0.0 0.0))
+
+  ([^double film-x ^double film-y [^double x ^double y ^double z]]
+     (Sample. film-x film-y x y z))
   ([^Sample s ^double x ^double y ^double z]
      (Sample. (:x-film s) (:y-film s) x y z)))
 
