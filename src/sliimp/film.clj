@@ -1,6 +1,6 @@
  (ns sliimp.film
    (:use [slicna core]
-         [slimath core]
+         [slimath core vec matrix]
          [sligeom core transform]
          [sliimp core sampler filter])
    (:import [java.util.concurrent ArrayBlockingQueue]
