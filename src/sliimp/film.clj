@@ -1,7 +1,7 @@
  (ns sliimp.film
    (:use [slicna core]
          [slimath core vec matrix]
-         [sligeom core transform]
+         [sligeom core bounding transform]
          [sliimp core sampler filter])
    (:import [java.util.concurrent ArrayBlockingQueue]
             [sliimp core.Rect sampler.Sample filter.Filter]
@@ -32,9 +32,10 @@
                  ^ArrayBlockingQueue requests
                  finished-f
                  ^Thread worker]
-  Bounded2
+  Bounding
     (width [this] (int (width bounds)))
-    (height [this] (int (height bounds))))
+    (height [this] (int (height bounds)))
+    (depth [this] 1))
 
 (defn ^Pixel add-sample 
   "Add a weighted-sample to a pixel"

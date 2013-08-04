@@ -1,4 +1,5 @@
-(ns sliimp.core)
+(ns sliimp.core
+  (:use [sligeom bounding]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
@@ -10,16 +11,13 @@
 (defn continuous "Discrete to continuous" [d] (+ d 0.5))
 (defn discrete "Continuous to discrete" [c] (Math/floor c))
 
-(defprotocol Bounded2 
-  (width [this])
-  (height [this]))
-
 (defrecord Rect [x0 y0 x1 y1]
-  Bounded2
+  Bounding
   (width [this]
     (- x1 x0))
   (height [this]
-    (- y1 y0)))
+    (- y1 y0))
+  (depth [this]  1))
 
 (defn rect
   "Create a rect"
