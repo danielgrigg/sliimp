@@ -1,4 +1,4 @@
-(defproject sliimp "0.2.3"
+(defproject sliimp "0.2.4"
   :description "An image processing library"
   :url "http://sliplanesoftware.com/"
   :license {:name "Eclipse Public License"
