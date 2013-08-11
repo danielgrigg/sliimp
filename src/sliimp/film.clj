@@ -4,7 +4,7 @@
          [sligeom core bounding transform]
          [sliimp core sampler filter])
    (:import [java.util.concurrent ArrayBlockingQueue]
-            [sliimp core.Rect sampler.Sample filter.Filter]
+            [sliimp core.Rect sampler.Sample filter.Filter sampler.Sampler]
             [sligeom.transform Transform]))
 
 (set! *warn-on-reflection* true)
@@ -197,3 +197,9 @@ kernel-fn must be a function of 2 arguments, x and y."
            (scale w (- h) 1) 
            (scale 0.5 0.5 1.0) 
            (translate 1 1 0)))
+
+(defn sampling-fn "Get sampling fn for a film" [^Film f]
+  (partial (:sampler-f f) (:samples-per-pixel f)))
+
+(defn ^Sampler sampler-film [^Film film ^long x ^long y]
+  ((:sampler-f film) (:samples-per-pixel film) x y))
