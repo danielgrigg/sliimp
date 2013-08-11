@@ -190,13 +190,6 @@ kernel-fn must be a function of 2 arguments, x and y."
        (doseq [^Sample s (:samples ss)]        
          (splat! f (kernel-fn s)))))))
 
-(defn ^Transform screen-transform 
-"NDC to screen coordinates. (0,0) in screen-space is the top-left."
-[^double w ^double h]
-  (compose (translate 0 h 0)
-           (scale w (- h) 1) 
-           (scale 0.5 0.5 1.0) 
-           (translate 1 1 0)))
 
 (defn sampling-fn "Get sampling fn for a film" [^Film f]
   (partial (:sampler-f f) (:samples-per-pixel f)))

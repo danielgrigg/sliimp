@@ -1,5 +1,6 @@
 (ns sliimp.core
-  (:use [sligeom bounding]))
+  (:use [sligeom core bounding transform])
+  (:import [sligeom.transform Transform]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
@@ -70,3 +71,11 @@ The coverage is the bounding-box of a circle with radius r, centered at [x y]."
   (-> (coverage x y w)
       (clip r)                        
       rect-seq))
+
+(defn ^Transform window-transform 
+"NDC to window coordinates. (0,0) in window-space is the top-left."
+[^double w ^double h]
+  (compose (translate 0 h 0)
+           (scale w (- h) 1) 
+           (scale 0.5 0.5 1.0) 
+           (translate 1 1 0)))
